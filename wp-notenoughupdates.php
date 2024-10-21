@@ -2,7 +2,7 @@
 /**
  * Plugin Name: NotEnoughUpdates
  * Description: Disables WordPress updates for the core, themes, and plugins, but allows itself to update from GitHub releases.
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: kathmandhu
  * Author URI: https://github.com/kathmandhu/wp-notenoughupdates
  * Plugin URI: https://github.com/kathmandhu/wp-notenoughupdates
@@ -15,16 +15,15 @@ if (!defined('ABSPATH')) {
 // Disable WordPress core updates
 add_filter('auto_update_core', '__return_false');
 add_filter('pre_site_transient_update_core', '__return_null');
-add_filter('pre_site_transient_update_plugins', 'disable_plugin_updates');
-add_filter('pre_site_transient_update_themes', 'disable_theme_updates');
 
 // Disable plugin updates, except for this plugin itself
+add_filter('pre_site_transient_update_plugins', 'disable_plugin_updates');
 function disable_plugin_updates($value) {
-    $plugin_slug = 'wp-notenoughupdates/wp-notenoughupdates.php';
+    $plugin_slug = 'wp-notenoughupdates/wp-notenoughupdates.php'; // Keep updates for this plugin
     if (isset($value->response)) {
         foreach ($value->response as $plugin_file => $plugin_data) {
             if ($plugin_file !== $plugin_slug) {
-                unset($value->response[$plugin_file]);
+                unset($value->response[$plugin_file]); // Remove all other plugins from update checks
             }
         }
     }
@@ -32,18 +31,27 @@ function disable_plugin_updates($value) {
 }
 
 // Disable theme updates
+add_filter('pre_site_transient_update_themes', 'disable_theme_updates');
 function disable_theme_updates($value) {
     if (isset($value->response)) {
-        $value->response = [];
+        $value->response = []; // Clear the theme updates
     }
     return $value;
+}
+
+// Clear cache to ensure updates are hidden after activation
+add_action('admin_init', 'clear_update_cache');
+function clear_update_cache() {
+    delete_site_transient('update_plugins');
+    delete_site_transient('update_themes');
+    delete_site_transient('update_core');
 }
 
 // Hook to check GitHub for the latest release and update the plugin
 add_action('init', 'check_for_plugin_update');
 
 function check_for_plugin_update() {
-    $current_version = '1.0.0'; // Current plugin version
+    $current_version = '1.0.1'; // Current plugin version
     $plugin_slug = 'wp-notenoughupdates';
     $repo_url = 'https://api.github.com/repos/kathmandhu/wp-notenoughupdates/releases/latest';
 
