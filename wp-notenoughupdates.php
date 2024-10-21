@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: NotEnoughUpdates
- * Description: Disables WordPress updates for the core, themes, and plugins, but allows itself to update from GitHub releases.
- * Version: 1.0.1
+ * Description: Disables WordPress updates for the core, themes, and plugins, but allows itself to update from GitHub releases. Prevents Elementor Pro and similar plugins from checking external updates.
+ * Version: 1.0.2
  * Author: kathmandhu
  * Author URI: https://github.com/kathmandhu/wp-notenoughupdates
  * Plugin URI: https://github.com/kathmandhu/wp-notenoughupdates
@@ -39,6 +39,27 @@ function disable_theme_updates($value) {
     return $value;
 }
 
+// Block HTTP requests to specific update sources
+add_filter('http_request_args', 'block_elementor_pro_update_requests', 10, 2);
+function block_elementor_pro_update_requests($args, $url) {
+    // List of URLs to block for updates (Elementor Pro and similar plugins)
+    $blocked_urls = array(
+        'https://elementor.com', // Elementor Pro update API
+        'https://pro.elementor.com', // Elementor Pro CDN
+        'https://api.elementor.com', // Elementor Pro API
+    );
+    
+    // Block any HTTP request that goes to the listed URLs
+    foreach ($blocked_urls as $blocked_url) {
+        if (strpos($url, $blocked_url) !== false) {
+            // Cancel the request by returning false
+            return array_merge($args, array('blocking' => false));
+        }
+    }
+    
+    return $args; // Return unmodified request if it's not an update URL
+}
+
 // Clear cache to ensure updates are hidden after activation
 add_action('admin_init', 'clear_update_cache');
 function clear_update_cache() {
@@ -51,7 +72,7 @@ function clear_update_cache() {
 add_action('init', 'check_for_plugin_update');
 
 function check_for_plugin_update() {
-    $current_version = '1.0.1'; // Current plugin version
+    $current_version = '1.0.2'; // Current plugin version
     $plugin_slug = 'wp-notenoughupdates';
     $repo_url = 'https://api.github.com/repos/kathmandhu/wp-notenoughupdates/releases/latest';
 
